@@ -5,42 +5,62 @@ from pygame.locals import *
 import time
 import sys
 
-sys.path.append('../')
-ENV_NAME = 'PlaygroundNavigationHuman-v1'
+sys.path.append("../")
+ENV_NAME = "PlaygroundNavigationHuman-v1"
 
-from playground.reward_function import sample_descriptions_from_state, get_reward_from_state
+from playground.reward_function import (
+    sample_descriptions_from_state,
+    get_reward_from_state,
+)
 from playground.descriptions import generate_all_descriptions
 from playground.env_params import get_env_params
+
+from playground.playgroundnavv1 import PlayGroundNavigationV1
+
 """
 Playing script. Control the agent with the arrows, close the gripper with the space bar.
 """
 
-env = gym.make(ENV_NAME, reward_screen=False, viz_data_collection=True)
+# env = gym.make(
+#     ENV_NAME,
+#     reward_screen=False,
+#     viz_data_collection=True,
+#     render_mode="human",
+# )
+
+env = PlayGroundNavigationV1(render_mode=True)
+
+
 pygame.init()
 
 env_params = get_env_params()
-train_descriptions, test_descriptions, extra_descriptions = generate_all_descriptions(env_params)
-all_descriptions = train_descriptions +  test_descriptions
+train_descriptions, test_descriptions, extra_descriptions = generate_all_descriptions(
+    env_params
+)
+all_descriptions = train_descriptions + test_descriptions
+
+print(f"Number of descriptions: {len(all_descriptions)}")
+print(f"Descriptions: {all_descriptions}")
 
 # Select the goal to generate the scene.
 goal_str = np.random.choice(all_descriptions)
 
 env.reset()
-env.unwrapped.reset_with_goal(goal_str)
+env.reset_with_goal(goal_str)
 
 while True:
     # init_render
 
     action = np.zeros([3])
     for event in pygame.event.get():
-        if hasattr(event, 'key'):
+        if hasattr(event, "key"):
             # J1
-            if (event.key == K_DOWN):
+            if event.key == K_DOWN:
                 action[1] = -1
             elif event.key == K_UP:
                 action[1] = 1
             # J2
-            elif (event.key == K_LEFT):
+            elif event.key == K_LEFT:
                 action[0] = -1
             elif event.key == K_RIGHT:
                 action[0] = 1
@@ -58,7 +78,9 @@ while True:
     env.render()
 
     # Sample descriptions of the current state
-    train_descr, test_descr, extra_descr = sample_descriptions_from_state(out[0], env.unwrapped.params)
+    train_descr, test_descr, extra_descr = sample_descriptions_from_state(
+        out[0], env.unwrapped.params
+    )
     descr = train_descr + test_descr
     print(descr)
 
@@ -67,5 +89,3 @@ while True:
         assert get_reward_from_state(out[0], d, env_params)
     for d in np.random.choice(list(set(all_descriptions) - set(descr)), size=20):
         assert not get_reward_from_state(out[0], d, env_params)
-
-
